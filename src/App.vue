@@ -1,7 +1,7 @@
 <template>
   <v-app>
-    <v-app-bar app color="primary" dark absolute>
-      <span class="mx-auto white--text text-center">Need On-line Cycle? Call 469-910-6366... starting at $20/month </span>
+    <v-app-bar app color="black" dark absolute>
+      <span class="mx-auto white--text text-center">App Requested by Moms for Moms and their Daughters</span>
     </v-app-bar>
 
 
