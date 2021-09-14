@@ -1,28 +1,61 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
+  <v-app>
+    <v-app-bar app color="primary" dark absolute>
+      <span class="mx-auto white--text text-center">Need On-line Cycle? Call 469-910-6366... starting at $20/month </span>
+    </v-app-bar>
+
+
+    <v-main>
+      <!-- <v-card v-if="authState !== 'signedin'" class="black white--text mt-3 pt-2 text-center">
+          Username: customer1
+      </v-card>
+      <v-card v-if="authState !== 'signedin'" class="black white--text pb-2 text-center">
+          Password: welcome2
+      </v-card> -->
+      <Cycle />
+      <!-- <Cycle v-if="authState === 'signedin' && user" :userProps="user.username" /> -->
+    </v-main>
+        <!-- <amplify-authenticator>
+          <amplify-sign-in slot="sign-in" :hide-sign-up="true">
+          </amplify-sign-in>
+        </amplify-authenticator>
+        <amplify-sign-out v-if="authState === 'signedin'" >
+        </amplify-sign-out> -->
+
+
+  </v-app>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Cycle from './components/Cycle';
+import { onAuthUIStateChange } from '@aws-amplify/ui-components'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    Cycle,
+  },
+  created() {
+    this.unsubscribeAuth = onAuthUIStateChange((authState, authData) => {
+      this.authState = authState;
+      this.user = authData;
+    })
+  },
+  data() {
+    return {
+      user: undefined,
+      authState: undefined,
+      unsubscribeAuth: undefined,
+      collapseOnScroll: true,
+    }
+  },
+  beforeDestroy() {
+    this.unsubscribeAuth();
   }
-}
+};
 </script>
-
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+  :root {
+    --amplify-primary-color: rgba(19, 89, 194, 0.776);
+  }
 </style>
