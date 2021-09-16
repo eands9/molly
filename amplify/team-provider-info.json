@@ -10,6 +10,11 @@
       "StackName": "amplify-formoms-dev-192846",
       "StackId": "arn:aws:cloudformation:us-east-1:148299306225:stack/amplify-formoms-dev-192846/bb999b10-14f2-11ec-9ef7-0e36da0af43d",
       "AmplifyAppId": "d2kw7ukyhvlzsd"
+    },
+    "categories": {
+      "auth": {
+        "formomsf4b2cdf6": {}
+      }
     }
   }
 }

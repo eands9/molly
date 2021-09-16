@@ -1,76 +1,18 @@
 <template>
   <v-row class="fill-height">
-    <v-col>
-      <v-sheet height="64">
-        <v-toolbar
-          flat
-        >
-          <v-btn
-            outlined
-            class="mr-4"
-            color="grey darken-2"
-            @click="setToday"
-          >
-            Today
+    <v-col><v-sheet height="64"><v-toolbar flat>
+          <v-btn outlined class="mr-4" color="black" @click="setToday">Today</v-btn>
+          <v-btn fab text small color="black" @click="prev">
+            <v-icon small>mdi-chevron-left</v-icon>
           </v-btn>
-          <v-btn
-            fab
-            text
-            small
-            color="grey darken-2"
-            @click="prev"
-          >
-            <v-icon small>
-              mdi-chevron-left
-            </v-icon>
-          </v-btn>
-          <v-btn
-            fab
-            text
-            small
-            color="grey darken-2"
-            @click="next"
-          >
-            <v-icon small>
-              mdi-chevron-right
-            </v-icon>
+          <v-btn fab text small color="black" @click="next">
+            <v-icon small>mdi-chevron-right</v-icon>
           </v-btn>
           <v-toolbar-title v-if="$refs.calendar">
             {{ $refs.calendar.title }}
           </v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-menu
-            bottom
-            right
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                outlined
-                color="grey darken-2"
-                v-bind="attrs"
-                v-on="on"
-              >
-                <span>{{ typeToLabel[type] }}</span>
-                <v-icon right>
-                  mdi-menu-down
-                </v-icon>
-              </v-btn>
-            </template>
-            <v-list>
-              <v-list-item @click="type = 'day'">
-                <v-list-item-title>Day</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="type = 'week'">
-                <v-list-item-title>Week</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="type = 'month'">
-                <v-list-item-title>Month</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="type = '4day'">
-                <v-list-item-title>4 days</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
+          
+
         </v-toolbar>
       </v-sheet>
       <v-sheet height="600">
@@ -125,6 +67,7 @@
                 Cancel
               </v-btn>
             </v-card-actions>
+            
           </v-card>
         </v-menu>
       </v-sheet>
@@ -132,31 +75,157 @@
   </v-row>
 </template>
 <script>
+import { Auth } from 'aws-amplify';
   export default {
     data: () => ({
-      cycleDays: null,
       focus: '',
       type: 'month',
-      typeToLabel: {
-        month: 'Month',
-        week: 'Week',
-        day: 'Day',
-        '4day': '4 Days',
-      },
       selectedEvent: {},
       selectedElement: null,
       selectedOpen: false,
-      start: null,
-      end: null,
       events: [],
-      colors: ['blue'],
-      names: ['Meeting'],
-      numOfDays: null,
+
+      apiRequest: false,
+      authState: undefined,
+      confirmCode: null,
+      dialogConfirm: false,
+      dialogForgotSubmit: false,
+      dialogLogin: false,
+      dialogRegister: false,
+      dialogForgot: false,
+      drawer: false,
+      email: "",
+      errorLogin: "",
+      errorRegister: "",
+      errorConfirm: "",
+      errorForgot: "",
+      errorForgotSubmit: "",
+      errorResendCode: "",
+      alertMissingInfo: false,
+      messageLogin: null,
+      newCode: "",
+      newPassword: "",
+      password: "",
+      rules: {
+        required: value => !!value || 'Required.',
+        counter: value => value.length <= 20 || 'Max 20 characters',
+        email: value => {
+          const pattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+          return pattern.test(value) || 'Invalid e-mail.'
+      },
+      signedIn: false,
+      unsubscribeAuth: undefined,
+      user: undefined,
+      username: "",
+    },
     }),
+    computed(){
+      this.isUserSignedIn();
+    },
     mounted () {
       this.$refs.calendar.checkChange()
     },
     methods: {
+    async isUserSignedIn(){
+      // need to fix in future as it is throwing out an error
+      try {
+        const userObj = await Auth.currentAuthenticatedUser()
+          this.signedIn = true
+          this.user = userObj
+      } catch (err) {
+          this.signedIn = false
+      }
+    },
+    async signin(){
+      try {
+        this.apiRequest=true
+        await Auth.signIn(this.email, this.password)
+        this.isUserSignedIn()
+        this.dialogLogin = false
+        this.dialogRegister = false
+        this.dialogForgot = false
+        this.errorLogin = null
+        this.messageLogin = null
+      } catch(err) {
+        this.errorLogin = err.message
+      }
+      this.apiRequest=false
+    },
+    async register(){
+      this.apiRequest=true
+      if (!this.password || !this.email) {
+        return;
+      }
+      try {
+        this.username = this.email
+        const {username, password, email } = this
+        await Auth.signUp({
+            username,
+            password,
+            attributes: { email }
+        });  
+        this.dialogRegister = false
+        this.dialogConfirm = true
+        this.dialogLogin = false
+      } catch (err) {this.errorRegister = err.message}
+      this.apiRequest=false
+    },
+    async confirmSignUp(){
+      this.apiRequest=true
+      try {
+        await Auth.confirmSignUp(this.email, this.confirmCode)
+        this.signin()
+        this.isUserSignedIn()
+        this.dialogConfirm = false
+      } catch (err) {
+        this.errorConfirm = err.message
+      }
+      this.apiRequest=false
+    },
+    async resendCode(){
+      try {
+          await Auth.resendSignUp(this.email);
+      } catch (err) {
+          this.errorResendCode = err.message
+      }
+    },
+    async forgot(){
+      try {
+        // const forgotOutput = await Auth.forgotPassword(this.email)
+        // console.log(forgotOutput)
+        await Auth.forgotPassword(this.email)
+        this.dialogForgot = false
+        this.dialogLogin = false
+        this.dialogForgotSubmit = true
+      } catch(err){
+        this.errorForgot = err.message
+      }
+    },
+    async forgotSubmit(){
+      this.apiRequest=true
+      this.errorLogin = null
+      this.messageLogin = null
+      try {
+        await Auth.forgotPasswordSubmit(this.email, this.newCode, this.newPassword)
+        this.dialogForgotSubmit=false
+        this.messageLogin = 'Succesful password reset... login again.'
+        this.dialogLogin=true
+        this.apiRequest=false
+      } catch(err){
+        this.errorForgotSubmit = err.message
+      }
+      this.apiRequest=false
+    },
+    async signOut() {
+      try {
+          await Auth.signOut();
+          this.drawer=false
+          this.user=null
+          this.signedIn=false
+      } catch (err) {
+          alert(err.message)
+      }
+    },
       viewDay ({ date }) {
         this.focus = date
         this.type = 'day'
@@ -192,43 +261,23 @@
       updateRange () {
         const events = []
 
-        // const min = new Date(`${start.date}T00:00:00`)
-        // const max = new Date(`${end.date}T23:59:59`)
-        // const days = 1
-        // const eventCount = this.rnd(days, days)
+        var occurences = 24;
+        var duration = 5;
+        var start_date = "9/13/2021 00:00";
+        for(let i=0; i <= occurences; i++){
+          var repeat_every = 28*i; //repeat every number of days/weeks/months
+          var start = new Date(start_date);
+          var end = new Date(start_date)
+          start.setDate( start.getDate() + repeat_every );
+          end.setDate( end.getDate() + repeat_every + (duration - 1 ));
 
-        // for (let i = 0; i < eventCount; i++) {
-          // const allDay = this.rnd(0, 3) === 0
-          // const firstTimestamp = this.rnd(min.getTime(), max.getTime())
-          // const first = new Date(firstTimestamp - (firstTimestamp % 900000))
-          // const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900000
-          // const second = new Date(first.getTime() + secondTimestamp)
-        this.start = new Date('2021-09-13 00:00')
-        this.numOfDays = 5
-        this.end = new Date()
-        this.end.setDate(this.start.getDate() + (this.numOfDays - 1))
           events.push({
-            name: 'Eric',
-            start: this.start,
-            end: this.end,
+            name: 'Child1',
+            start: start,
+            end: end,
             color: 'purple darken-4',
           })
-        
-        this.cycleDays = 28
-        const start2 = new Date()
-        const end2 = new Date()
-        start2.setDate(this.start.getDate() + this.cycleDays)
-        end2.setDate(this.end.getDate() + this.cycleDays)
-        this.start = start2
-        this.end = end2
-          events.push({
-            name: 'Eric',
-            start: this.start,
-            end: this.end,
-            color: 'purple darken-4',
-          })
-        // }
-
+        }
         this.events = events
       },
       rnd (a, b) {
