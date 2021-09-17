@@ -1,8 +1,8 @@
 <template>
   <v-app>
-    <v-app-bar app color="black" dark absolute>
+    <!-- <v-app-bar app color="black" dark absolute>
       <span class="mx-auto white--text text-center">For Molly</span>
-    </v-app-bar>
+    </v-app-bar> -->
 
 
     <v-main>

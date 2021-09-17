@@ -1,6 +1,6 @@
 type calEvent @model @auth(rules: [
   { allow: owner },
-  { allow: private, mutations: [read, create, update, delete] }
+  { allow: private, operations: [read], mutations: [create, update, delete] }
   ])
   {
     id: ID!
@@ -8,6 +8,6 @@ type calEvent @model @auth(rules: [
     lname: String
     start: String
     end: String
-    cycle_length: Integer
-    duration: Integer
+    cycle_length: Int
+    duration: Int
   }

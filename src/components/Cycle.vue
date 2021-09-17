@@ -1,7 +1,160 @@
 <template>
   <v-row class="fill-height">
+      <!-- 1st bar -->
+    <v-container class="purple darken-4" fluid>
+      <v-row no-gutters>
+        <v-app-bar-nav-icon class="black mt-3 mr-4" @click.stop="drawer = !drawer" color=white></v-app-bar-nav-icon>
+        <h1 class="white--text mt-2">Molly</h1>
+        <v-spacer></v-spacer>
+        <v-btn rounded class="mt-4 mr-3" @click="dialog = true">Enter Date</v-btn>
+      </v-row>
+    </v-container>
+    <!-- Navigation Drawer -->
+    <v-navigation-drawer v-model="drawer" absolute temporary>
+      <v-list shaped>
+        <v-list-item-group v-model="item">
+          <v-list-item v-if="signedIn === true"><v-list-item-title class="font-weight-bold">Hi {{this.user.username}}!</v-list-item-title></v-list-item>
+          <v-list-item v-if="signedIn === false" @click="dialogLogin=true"><v-list-item-icon><v-icon color=black>mdi-login</v-icon></v-list-item-icon><v-list-item-title>Login</v-list-item-title></v-list-item>
+          <v-list-item><v-list-item-icon><v-icon color=black>mdi-account-details</v-icon></v-list-item-icon><v-list-item-title>What is Molly's app?</v-list-item-title></v-list-item>
+          <v-list-item><v-list-item-icon><v-icon color=black>mdi-bug</v-icon></v-list-item-icon><v-list-item-title>Report a Bug</v-list-item-title></v-list-item>
+          <v-list-item><v-list-item-icon><v-icon color=black>mdi-comment-quote</v-icon></v-list-item-icon><v-list-item-title>Feedback</v-list-item-title></v-list-item>
+          <v-list-item><v-list-item-icon><v-icon color=black>mdi-head-lightbulb-outline</v-icon></v-list-item-icon><v-list-item-title>Got an app idea?</v-list-item-title></v-list-item>
+          <v-list-item v-if="signedIn === true" @click="signOut"><v-list-item-icon><v-icon color=black>mdi-logout</v-icon></v-list-item-icon><v-list-item-title>Logout</v-list-item-title></v-list-item>
+        </v-list-item-group>
+      </v-list>
+    </v-navigation-drawer>
+    <!-- Create Event dialog -->
+    <v-dialog v-model="dialog" max-width="500">
+      <v-card>
+        <v-container>
+          <!-- <v-alert v-if="showError" dense type="error">Required info missed *</v-alert> -->
+            <v-text-field class="mt-7" v-model="name" label="Name? (*required)" outlined></v-text-field>
+            <v-text-field v-model="start" type="date" label="Start of last period (*=required)" outlined></v-text-field>
+            <v-text-field v-model="duration" label="How long did it last? (*required)" outlined></v-text-field>
+            <v-text-field v-model="cycle_length" label="How long is the menstrual cycle? (*required)" outlined></v-text-field>
+            <v-row justify="center">
+            <v-btn type="submit" color="purple darken-4 white--text" class="ma-4" @click.prevent="createEvent">Get Results</v-btn>
+            </v-row>
+        </v-container>
+      </v-card>
+    </v-dialog>
+
+    <!-- Login Dialog Box  -->
+      <v-dialog v-model="dialogLogin">
+        <v-card>
+          <v-container style="width=50%" class="indigo darken-4" fluid>
+            <v-row justify="center" align="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <h3 v-if="messageLogin" align=center class="font-weight-bold red--text">{{ messageLogin }}</h3>
+                <v-text-field :rules="[rules.required, rules.email]" class="ma-3 mt-10 font-weight-bold" v-model="email" dark  label="Enter Email" outlined rounded></v-text-field>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <v-text-field :rules="[rules.required]" class="mx-3 mt-3" v-model="password" type="password" dark  label="Enter Password" outlined rounded></v-text-field>
+                <h3 v-if="errorLogin" align=center class="font-weight-bold red--text">{{ errorLogin }}</h3>
+              </v-col>  
+            </v-row>
+            <v-row justify="center" no-gutters>
+                <v-btn class="ma-4" color="black" dark @click="signin" rounded>Login<v-icon color="white">mdi-login</v-icon></v-btn>
+                <v-btn class="ma-4" color="black" dark @click="dialogRegister=true" rounded>Register<v-icon color="white" >mdi-account-plus</v-icon></v-btn>
+                <v-btn class="ma-4" color="black" dark @click="dialogForgot=true" rounded>Forgot Password<v-icon color="white" >mdi-lock-reset</v-icon></v-btn>
+            </v-row>
+          </v-container>
+          <v-progress-linear v-if="apiRequest" indeterminate class="indigo darken-4"></v-progress-linear>
+        </v-card>
+      </v-dialog>
+    <!-- Register Dialog Box  -->
+      <v-dialog v-model="dialogRegister">
+        <v-card>
+          <v-container style="width=50%" class="indigo darken-4" fluid>
+            <v-row justify="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <v-text-field :rules="[rules.required, rules.email]" class="ma-3 mt-10 font-weight-bold" v-model="email" type="email" dark  label="Enter Email" outlined rounded></v-text-field>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <v-text-field :rules="[rules.required]" class="mx-3 mt-3" v-model="password" type="password" dark  label="Enter Password" outlined rounded></v-text-field>
+                <h3 v-if="errorRegister" align=center class="font-weight-bold red--text">{{ errorRegister }}</h3>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+                <v-btn class="ma-4" color="black" dark @click="register" rounded>Register<v-icon color="white">mdi-account-plus</v-icon></v-btn>
+                <v-btn class="ma-4" color="black" dark @click="dialogForgot=true" rounded>Forgot Password<v-icon color="white">mdi-lock-reset</v-icon></v-btn>
+            </v-row>
+          </v-container>
+          <v-progress-linear v-if="apiRequest" indeterminate class="indigo darken-4"></v-progress-linear>
+        </v-card>
+
+
+      </v-dialog>
+    <!-- Signup Confirmation  -->
+      <v-dialog v-model="dialogConfirm">
+        <v-card><v-container style="width=50%" class="indigo darken-4" fluid>
+            <v-row justify="center" no-gutters>
+              <v-card-text align="center" class="mt-7 white--text">Please check your email for confirmation code</v-card-text>
+              <v-col cols=12 md=4>
+                <v-text-field class="ma-3 mt-1 font-weight-bold" v-model="confirmCode" dark  label="Confirmation Code" outlined rounded></v-text-field>
+                <h3 v-if="errorConfirm" align=center class="font-weight-bold red--text">{{ errorConfirm }}</h3>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+                <v-btn class="ma-4" color="black" dark @click="confirmSignUp" rounded>Confirm<v-icon color="white">mdi-ticket-confirmation</v-icon></v-btn>
+                <v-btn class="ma-4" color="black" dark @click="resendCode" rounded>Re-send Code<v-icon color="white">mdi-email-sync-outline</v-icon></v-btn>
+            </v-row></v-container>
+            <v-progress-linear v-if="apiRequest" indeterminate class="indigo darken-4"></v-progress-linear>
+            </v-card>
+      </v-dialog>
+    <!-- Forgot Password  -->
+      <v-dialog v-model="dialogForgot">
+        <v-card><v-container style="width=50%" class="indigo darken-4" fluid>
+            <v-row justify="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <v-text-field class="ma-3 mt-10 font-weight-bold" v-model="email" :rules="[rules.required, rules.email]" type="email" dark  label="Enter Email" outlined rounded></v-text-field>
+                <h3 v-if="errorForgot" align=center class="font-weight-bold red--text">{{ errorForgot }}</h3>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+                <v-btn class="ma-4" color="black" dark @click="forgot" rounded>Forgot Password<v-icon color="white">mdi-ticket-confirmation</v-icon></v-btn>
+            </v-row></v-container></v-card>
+      </v-dialog>
+    <!-- Forgot Password Submit -->
+      <v-dialog v-model="dialogForgotSubmit">
+        <v-card><v-container style="width=50%" class="indigo darken-4" fluid>
+            <v-row justify="center" no-gutters>
+              <v-card-text align="center" class="mt-7 white--text">Please check your email for confirmation code</v-card-text>
+              <v-col  cols=12 md=4>
+                <v-text-field class="ma-3 font-weight-bold" v-model="newCode" dark  label="Confirmation Code" outlined rounded></v-text-field>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+              <v-col  cols=12 md=4>
+                <v-text-field :rules="[rules.required]" class="ma-3 font-weight-bold" v-model="newPassword" type="password" dark  label="Enter New Password" outlined rounded></v-text-field>
+                <h3 v-if="errorForgotSubmit" align=center class="font-weight-bold red--text">{{ errorForgotSubmit }}</h3>
+              </v-col>
+            </v-row>
+            <v-row justify="center" no-gutters>
+                <v-btn class="ma-4" color="black" dark @click="forgotSubmit" rounded>Submit<v-icon color="white">mdi-file-send-outline</v-icon></v-btn>
+            </v-row></v-container>
+            <v-progress-linear v-if="apiRequest" indeterminate class="indigo darken-4"></v-progress-linear>
+          </v-card>
+          
+      </v-dialog>
+    <!-- Missing Info Alert -->
+        <v-dialog v-model="alertMissingInfo" persistent max-width="290">
+          <v-card>
+            <v-card-title class="red headline" style="font-weight:bold; color:white;">Alert</v-card-title>
+            <v-card-text>Please enter the missing info!</v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn text @click="alertMissingInfo = false">Close</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+        
     <v-col><v-sheet height="64"><v-toolbar flat>
-          <v-btn outlined class="mr-4" color="black" @click="setToday">Today</v-btn>
+          <!-- <v-btn outlined class="mr-4" color="black" @click="setToday">Today</v-btn> -->
           <v-btn fab text small color="black" @click="prev">
             <v-icon small>mdi-chevron-left</v-icon>
           </v-btn>
@@ -11,15 +164,13 @@
           <v-toolbar-title v-if="$refs.calendar">
             {{ $refs.calendar.title }}
           </v-toolbar-title>
-          
-
         </v-toolbar>
       </v-sheet>
       <v-sheet height="600">
         <v-calendar
           ref="calendar"
           v-model="focus"
-          color="purple darken-2 white--text"
+          color="black white--text"
           :events="events"
           :event-color="getEventColor"
           :type="type"
@@ -28,46 +179,18 @@
           @click:date="viewDay"
           @change="updateRange"
         ></v-calendar>
-        <v-menu
-          v-model="selectedOpen"
-          :close-on-content-click="false"
-          :activator="selectedElement"
-          offset-x
-        >
-          <v-card
-            color="grey lighten-4"
-            min-width="350px"
-            flat
-          >
-            <v-toolbar
-              :color="selectedEvent.color"
-              dark
-            >
-              <v-btn icon>
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
+        <v-menu v-model="selectedOpen" :close-on-content-click="false" :activator="selectedElement" offset-x>
+          <v-card color="grey lighten-4" min-width="350px" flat>
+            <v-toolbar :color="selectedEvent.color" dark>
+              <v-btn icon><v-icon>mdi-pencil</v-icon></v-btn>
               <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
               <v-spacer></v-spacer>
-              <v-btn icon>
-                <v-icon>mdi-heart</v-icon>
-              </v-btn>
-              <v-btn icon>
-                <v-icon>mdi-dots-vertical</v-icon>
-              </v-btn>
+              <v-btn icon><v-icon>mdi-dots-vertical</v-icon></v-btn>
             </v-toolbar>
-            <v-card-text>
-              <span v-html="selectedEvent.details"></span>
-            </v-card-text>
+            <v-card-text><span v-html="selectedEvent.details"></span></v-card-text>
             <v-card-actions>
-              <v-btn
-                text
-                color="secondary"
-                @click="selectedOpen = false"
-              >
-                Cancel
-              </v-btn>
+              <v-btn text color="secondary" @click="selectedOpen = false">Cancel</v-btn>
             </v-card-actions>
-            
           </v-card>
         </v-menu>
       </v-sheet>
@@ -83,7 +206,17 @@ import { Auth } from 'aws-amplify';
       selectedEvent: {},
       selectedElement: null,
       selectedOpen: false,
-      events: [],
+      events: undefined,
+
+      dialog: false,
+      item: "",
+
+      name: null,
+      lname: null,
+      start: null,
+      end: null,
+      cycle_length: null,
+      duration: null,
 
       apiRequest: false,
       authState: undefined,
@@ -113,11 +246,11 @@ import { Auth } from 'aws-amplify';
           const pattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
           return pattern.test(value) || 'Invalid e-mail.'
       },
+    },
       signedIn: false,
       unsubscribeAuth: undefined,
       user: undefined,
       username: "",
-    },
     }),
     computed(){
       this.isUserSignedIn();
@@ -126,6 +259,30 @@ import { Auth } from 'aws-amplify';
       this.$refs.calendar.checkChange()
     },
     methods: {
+    createEvent(){
+        const events = []
+
+        var occurences = 24;
+        // var duration = 5;
+        var start_date = this.start + " 00:00";
+        for(let i=0; i <= occurences; i++){
+          var repeat_every = 28*i; //repeat every number of days/weeks/months
+          var start = new Date(start_date);
+          var end = new Date(start_date)
+          start.setDate( start.getDate() + repeat_every );
+          end.setDate( end.getDate() + repeat_every + (this.duration - 1 ));
+
+
+          events.push({
+            name: this.name,
+            start: start,
+            end: end,
+            color: 'purple darken-4',
+          })
+        }
+        this.events = events
+        this.dialog = false
+    },
     async isUserSignedIn(){
       // need to fix in future as it is throwing out an error
       try {
@@ -259,26 +416,26 @@ import { Auth } from 'aws-amplify';
         nativeEvent.stopPropagation()
       },
       updateRange () {
-        const events = []
+        // const events = []
 
-        var occurences = 24;
-        var duration = 5;
-        var start_date = "9/13/2021 00:00";
-        for(let i=0; i <= occurences; i++){
-          var repeat_every = 28*i; //repeat every number of days/weeks/months
-          var start = new Date(start_date);
-          var end = new Date(start_date)
-          start.setDate( start.getDate() + repeat_every );
-          end.setDate( end.getDate() + repeat_every + (duration - 1 ));
+        // var occurences = 24;
+        // var duration = 5;
+        // var start_date = "9/13/2021 00:00";
+        // for(let i=0; i <= occurences; i++){
+        //   var repeat_every = 28*i; //repeat every number of days/weeks/months
+        //   var start = new Date(start_date);
+        //   var end = new Date(start_date)
+        //   start.setDate( start.getDate() + repeat_every );
+        //   end.setDate( end.getDate() + repeat_every + (duration - 1 ));
 
-          events.push({
-            name: 'Child1',
-            start: start,
-            end: end,
-            color: 'purple darken-4',
-          })
-        }
-        this.events = events
+        //   events.push({
+        //     name: 'Eric',
+        //     start: start,
+        //     end: end,
+        //     color: 'purple darken-4',
+        //   })
+        // }
+        // this.events = events
       },
       rnd (a, b) {
         return Math.floor((b - a + 1) * Math.random()) + a
