@@ -152,7 +152,7 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
-        
+
     <v-col><v-sheet height="64"><v-toolbar flat>
           <!-- <v-btn outlined class="mr-4" color="black" @click="setToday">Today</v-btn> -->
           <v-btn fab text small color="black" @click="prev">
@@ -252,11 +252,12 @@ import { Auth } from 'aws-amplify';
       user: undefined,
       username: "",
     }),
-    computed(){
-      this.isUserSignedIn();
-    },
+    // computed(){
+    //   this.isUserSignedIn();
+    // },
     mounted () {
       this.$refs.calendar.checkChange()
+      this.isUserSignedIn();
     },
     methods: {
     createEvent(){
@@ -266,7 +267,7 @@ import { Auth } from 'aws-amplify';
         // var duration = 5;
         var start_date = this.start + " 00:00";
         for(let i=0; i <= occurences; i++){
-          var repeat_every = 28*i; //repeat every number of days/weeks/months
+          var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
           var start = new Date(start_date);
           var end = new Date(start_date)
           start.setDate( start.getDate() + repeat_every );
@@ -282,6 +283,26 @@ import { Auth } from 'aws-amplify';
         }
         this.events = events
         this.dialog = false
+    },
+    async createEvent1() {
+      this.name =""
+      const { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status } = this;
+      const calendar = { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status };
+
+      // Make field mandatory 
+      // If user is admin and all info are available, then create record
+      if (this.userProps === 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0)) && this.owner2 && this.category) {
+        await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()} 
+      // Else if not admin and user with customer info, create record
+      else if (this.userProps !== 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0))){
+          await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()}
+      else { 
+        this.showError = true
+        this.dialog_color = 'red lighten-5'
+      }
+      // EH 1
+      // this.getCalEvents()
+
     },
     async isUserSignedIn(){
       // need to fix in future as it is throwing out an error
@@ -315,6 +336,7 @@ import { Auth } from 'aws-amplify';
       }
       try {
         this.username = this.email
+        console.log(this.username)
         const {username, password, email } = this
         await Auth.signUp({
             username,
