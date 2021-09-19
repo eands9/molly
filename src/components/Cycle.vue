@@ -32,8 +32,9 @@
             <v-text-field v-model="start" type="date" label="Start of last period (*=required)" outlined></v-text-field>
             <v-text-field v-model="duration" label="How long did it last? (*required)" outlined></v-text-field>
             <v-text-field v-model="cycle_length" label="How long is the menstrual cycle? (*required)" outlined></v-text-field>
+            <v-text-field v-model="email" label="Parent's email (only one email)" outlined></v-text-field>
             <v-row justify="center">
-            <v-btn type="submit" color="purple darken-4 white--text" class="ma-4" @click.prevent="createEvent">Get Results</v-btn>
+            <v-btn type="submit" color="purple darken-4 white--text" class="ma-4" @click="createEvent">Get Results</v-btn>
             </v-row>
         </v-container>
       </v-card>
@@ -198,7 +199,10 @@
   </v-row>
 </template>
 <script>
-import { Auth } from 'aws-amplify';
+// import { Auth } from 'aws-amplify';
+import { Auth, API } from 'aws-amplify';
+import { createCalEvent,graphqlOperation } from "@/graphql/subscriptions";
+// import { createCalEvent } from "@/graphql/subscriptions";
   export default {
     data: () => ({
       focus: '',
@@ -206,17 +210,17 @@ import { Auth } from 'aws-amplify';
       selectedEvent: {},
       selectedElement: null,
       selectedOpen: false,
-      events: undefined,
+      events: [],
 
       dialog: false,
       item: "",
 
       name: null,
-      lname: null,
       start: null,
       end: null,
       cycle_length: null,
       duration: null,
+      parents_email: null,
 
       apiRequest: false,
       authState: undefined,
@@ -260,46 +264,72 @@ import { Auth } from 'aws-amplify';
       this.isUserSignedIn();
     },
     methods: {
-    createEvent(){
-        const events = []
+    async createEvent(){
+        // const events = []
 
-        var occurences = 24;
+      const { name, start, cycle_length, duration, parents_email } = this;
+      const calendar = { name, start, cycle_length, duration, parents_email};
+
+      await API.graphql({query: createCalEvent, variables: { input: calendar }})
+
+
+        // this.occurences = 24 // prediction of 24 months
+        // var start_date = this.start + " 00:00";
+        // console.log(start_date)
+        
+        // for(let i=0; i <= this.occurences; i++){
+        //   var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
+        //   this.start = new Date(start_date);
+        //   this.end = new Date(start_date)
+        //   this.start.setDate( this.start.getDate() + repeat_every );
+        //   this.end.setDate( this.end.getDate() + repeat_every + (this.duration - 1 ));
+
+
+        //   this.events.push({
+        //     name: this.name,
+        //     start: this.start,
+        //     end: this.end,
+        //     color: 'purple darken-4',
+        //   })
+        // }
+
+      try {
+            const calendar = {
+              name: this.name,
+              start: this.start,
+              cycle_length: this.cycle_length,
+              duration: this.duration,
+              parents_email: this.parents_email
+              }   
+              await API.graphql(graphqlOperation(createCalEvent, {input: calendar}));
+            } catch (error) {
+                console.log(error)
+            }
+
+
+
+        // var occurences = 24;
         // var duration = 5;
-        var start_date = this.start + " 00:00";
-        for(let i=0; i <= occurences; i++){
-          var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
-          var start = new Date(start_date);
-          var end = new Date(start_date)
-          start.setDate( start.getDate() + repeat_every );
-          end.setDate( end.getDate() + repeat_every + (this.duration - 1 ));
 
-
-          events.push({
-            name: this.name,
-            start: start,
-            end: end,
-            color: 'purple darken-4',
-          })
-        }
-        this.events = events
+        // this.events = events
         this.dialog = false
     },
     async createEvent1() {
-      this.name =""
-      const { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status } = this;
-      const calendar = { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status };
+      // this.name =""
+      // const { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status } = this;
+      // const calendar = { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status };
 
-      // Make field mandatory 
-      // If user is admin and all info are available, then create record
-      if (this.userProps === 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0)) && this.owner2 && this.category) {
-        await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()} 
-      // Else if not admin and user with customer info, create record
-      else if (this.userProps !== 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0))){
-          await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()}
-      else { 
-        this.showError = true
-        this.dialog_color = 'red lighten-5'
-      }
+      // // Make field mandatory 
+      // // If user is admin and all info are available, then create record
+      // if (this.userProps === 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0)) && this.owner2 && this.category) {
+      //   await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()} 
+      // // Else if not admin and user with customer info, create record
+      // else if (this.userProps !== 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0))){
+      //     await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()}
+      // else { 
+      //   this.showError = true
+      //   this.dialog_color = 'red lighten-5'
+      // }
       // EH 1
       // this.getCalEvents()
 
