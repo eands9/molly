@@ -200,10 +200,11 @@
 </template>
 <script>
 // import { Auth } from 'aws-amplify';
-import { Auth, API } from 'aws-amplify';
-import { createCalEvent,graphqlOperation } from "@/graphql/subscriptions";
-// import { createCalEvent } from "@/graphql/subscriptions";
+import { Auth, API, graphqlOperation } from 'aws-amplify';
+import { createCalEvent } from "@/graphql/mutations";
+// import { createCalEvent } from "@/graphql/mutations";
   export default {
+    name: 'app',
     data: () => ({
       focus: '',
       type: 'month',
@@ -267,31 +268,12 @@ import { createCalEvent,graphqlOperation } from "@/graphql/subscriptions";
     async createEvent(){
         // const events = []
 
-      const { name, start, cycle_length, duration, parents_email } = this;
-      const calendar = { name, start, cycle_length, duration, parents_email};
-
-      await API.graphql({query: createCalEvent, variables: { input: calendar }})
-
-
-        // this.occurences = 24 // prediction of 24 months
-        // var start_date = this.start + " 00:00";
-        // console.log(start_date)
-        
-        // for(let i=0; i <= this.occurences; i++){
-        //   var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
-        //   this.start = new Date(start_date);
-        //   this.end = new Date(start_date)
-        //   this.start.setDate( this.start.getDate() + repeat_every );
-        //   this.end.setDate( this.end.getDate() + repeat_every + (this.duration - 1 ));
-
-
-        //   this.events.push({
-        //     name: this.name,
-        //     start: this.start,
-        //     end: this.end,
-        //     color: 'purple darken-4',
-        //   })
-        // }
+        if (!this.name || !this.start || !this.cycle_length ||! this.duration) return;
+      
+      // this.name = 'Eric'
+      // this.start = '09/17/2021'
+      // this.cycle_length = 23
+      // this.duration = 5
 
       try {
             const calendar = {
@@ -305,6 +287,37 @@ import { createCalEvent,graphqlOperation } from "@/graphql/subscriptions";
             } catch (error) {
                 console.log(error)
             }
+
+
+
+      // const { name, start, cycle_length, duration, parents_email } = this;
+
+      // const calendar = { name, start, cycle_length, duration, parents_email};
+
+      // await API.graphql({query: createCalEvent, variables: { input: calendar }})
+
+
+        this.occurences = 24 // prediction of 24 months
+        var start_date = this.start + " 00:00";
+        // console.log(start_date)
+        
+        for(let i=0; i <= this.occurences; i++){
+          var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
+          this.start = new Date(start_date);
+          this.end = new Date(start_date)
+          this.start.setDate( this.start.getDate() + repeat_every );
+          this.end.setDate( this.end.getDate() + repeat_every + (this.duration - 1 ));
+
+
+          this.events.push({
+            name: this.name,
+            start: this.start,
+            end: this.end,
+            color: 'purple darken-4',
+          })
+        }
+
+
 
 
 

@@ -1,0 +1,12 @@
+type calEvent @model @auth(rules: [
+  { allow: owner },
+  { allow: private, operations: [read], mutations: [create, update, delete] }
+  ])
+  {
+    id: ID!
+    name: String!
+    start: String!
+    cycle_length: Int!
+    duration: Int!
+    parents_email: String
+  }
