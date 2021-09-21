@@ -10,6 +10,8 @@ export const onCreateCalEvent = /* GraphQL */ `
       cycle_length
       duration
       parents_email
+      parents_code
+      owner2
       createdAt
       updatedAt
       owner
@@ -25,6 +27,8 @@ export const onUpdateCalEvent = /* GraphQL */ `
       cycle_length
       duration
       parents_email
+      parents_code
+      owner2
       createdAt
       updatedAt
       owner
@@ -40,6 +44,8 @@ export const onDeleteCalEvent = /* GraphQL */ `
       cycle_length
       duration
       parents_email
+      parents_code
+      owner2
       createdAt
       updatedAt
       owner

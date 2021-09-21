@@ -28,11 +28,13 @@
       <v-card>
         <v-container>
           <!-- <v-alert v-if="showError" dense type="error">Required info missed *</v-alert> -->
-            <v-text-field class="mt-7" v-model="name" label="Name? (*required)" outlined></v-text-field>
+            <v-text-field class="mt-7" v-model="name" label="First Name? (*required)" outlined></v-text-field>
             <v-text-field v-model="start" type="date" label="Start of last period (*=required)" outlined></v-text-field>
             <v-text-field v-model="duration" label="How long did it last? (*required)" outlined></v-text-field>
-            <v-text-field v-model="cycle_length" label="How long is the menstrual cycle? (*required)" outlined></v-text-field>
-            <v-text-field v-model="email" label="Parent's email (only one email)" outlined></v-text-field>
+            <v-text-field v-model="cycle_length" label="How long is your menstrual cycle? (*required)" outlined></v-text-field>
+            <v-switch v-model="inform_parent" label="(For Daugthers) Turn on switch and fill out if you want to share info w a parent"></v-switch>
+            <v-text-field v-if="inform_parent" v-model="parents_email" label="Enter one parent's email" outlined></v-text-field>
+            <v-text-field v-if="inform_parent" v-model="parents_code" label="Enter your parent's code that they've created" outlined></v-text-field>
             <v-row justify="center">
             <v-btn type="submit" color="purple darken-4 white--text" class="ma-4" @click="createEvent">Get Results</v-btn>
             </v-row>
@@ -202,7 +204,7 @@
 // import { Auth } from 'aws-amplify';
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import { createCalEvent } from "@/graphql/mutations";
-// import { createCalEvent } from "@/graphql/mutations";
+import { listCalEvents } from "@/graphql/queries";
   export default {
     name: 'app',
     data: () => ({
@@ -216,12 +218,15 @@ import { createCalEvent } from "@/graphql/mutations";
       dialog: false,
       item: "",
 
+      inform_parent: false,
       name: null,
       start: null,
       end: null,
       cycle_length: null,
       duration: null,
       parents_email: null,
+      parents_code: null,
+
 
       apiRequest: false,
       authState: undefined,
@@ -260,13 +265,141 @@ import { createCalEvent } from "@/graphql/mutations";
     // computed(){
     //   this.isUserSignedIn();
     // },
+    watch:{
+      user: function(){
+        this.getCalEvents()
+        this.getCalEvents2()
+      }
+    },
     mounted () {
       this.$refs.calendar.checkChange()
       this.isUserSignedIn();
     },
     methods: {
+    async getCalEvents() {
+      // if user is owner
+        this.events = []
+        let filter = {owner2: {eq: this.username}};
+        const calendar1 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter }});
+        this.setNextToken = calendar1.data.listCalEvents.nextToken
+        const setCalendar1 = calendar1.data.listCalEvents.items
+        this.calendars = setCalendar1
+
+        //calendar 2
+        if(this.setNextToken !== null){
+          const calendar2 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter, nextToken: this.setNextToken }});
+          const setCalendar2 = calendar2.data.listCalEvents.items
+          this.setNextToken = calendar2.data.listCalEvents.nextToken
+          console.log("Tech - Start Preparing for calendar3")
+          this.calendars = setCalendar1.concat(setCalendar2)
+        } else {
+          console.log("Tech - Not using calendar 2 yet")
+        }
+
+        // calendar 3
+        if(this.setNextToken !== null){
+          const calendar3 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter, nextToken: this.setNextToken }});
+          const setCalendar3 = calendar3.data.listCalEvents.items
+          this.setNextToken = calendar3.data.listCalEvents.nextToken
+          console.log("Tech - Start Preparing for calendar4")
+          this.calendars = this.calendars.concat(setCalendar3)
+        } else {
+          console.log("Tech - Not using calendar 3 yet")
+        }
+
+        const eventsorig = this.calendars
+
+        // let events = []
+        let ce = eventsorig
+        ce.forEach(doc => {
+          console.log(doc.owner2)
+              this.occurences = 24 // prediction of 24 months
+              var start_date = doc.start + " 00:00";
+              // console.log(start_date)
+              
+              for(let i=0; i <= this.occurences; i++){
+                var repeat_every = doc.cycle_length*i; //repeat every number of days/weeks/months
+                this.start = new Date(start_date);
+                this.end = new Date(start_date)
+                this.start.setDate( this.start.getDate() + repeat_every );
+                this.end.setDate( this.end.getDate() + repeat_every + (doc.duration - 1 ));
+
+
+                this.events.push({
+                  name: doc.name,
+                  start: this.start,
+                  end: this.end,
+                  color: 'purple darken-4',
+                })
+              }
+        })
+
+      // if user is admin
+      // }
+    },
+    async getCalEvents2() {
+      // when pulling data based on parent's email
+        this.events = []
+        let filter = {parents_email: {eq: this.username}};
+        const calendar1 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter }});
+        this.setNextToken = calendar1.data.listCalEvents.nextToken
+        const setCalendar1 = calendar1.data.listCalEvents.items
+        this.calendars = setCalendar1
+
+        //calendar 2
+        if(this.setNextToken !== null){
+          const calendar2 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter, nextToken: this.setNextToken }});
+          const setCalendar2 = calendar2.data.listCalEvents.items
+          this.setNextToken = calendar2.data.listCalEvents.nextToken
+          console.log("Tech - Start Preparing for calendar3")
+          this.calendars = setCalendar1.concat(setCalendar2)
+        } else {
+          console.log("Tech - Not using calendar 2 yet")
+        }
+
+        // calendar 3
+        if(this.setNextToken !== null){
+          const calendar3 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter, nextToken: this.setNextToken }});
+          const setCalendar3 = calendar3.data.listCalEvents.items
+          this.setNextToken = calendar3.data.listCalEvents.nextToken
+          console.log("Tech - Start Preparing for calendar4")
+          this.calendars = this.calendars.concat(setCalendar3)
+        } else {
+          console.log("Tech - Not using calendar 3 yet")
+        }
+
+        const eventsorig = this.calendars
+
+        // let events = []
+        let ce = eventsorig
+        ce.forEach(doc => {
+          console.log(doc.owner2)
+              this.occurences = 24 // prediction of 24 months
+              var start_date = doc.start + " 00:00";
+              // console.log(start_date)
+              
+              for(let i=0; i <= this.occurences; i++){
+                var repeat_every = doc.cycle_length*i; //repeat every number of days/weeks/months
+                this.start = new Date(start_date);
+                this.end = new Date(start_date)
+                this.start.setDate( this.start.getDate() + repeat_every );
+                this.end.setDate( this.end.getDate() + repeat_every + (doc.duration - 1 ));
+
+
+                this.events.push({
+                  name: doc.name,
+                  start: this.start,
+                  end: this.end,
+                  color: 'purple darken-4',
+                })
+              }
+        })
+
+      // if user is admin
+      // }
+    },
     async createEvent(){
-        // const events = []
+      // const events = []
 
         if (!this.name || !this.start || !this.cycle_length ||! this.duration) return;
       
@@ -281,9 +414,39 @@ import { createCalEvent } from "@/graphql/mutations";
               start: this.start,
               cycle_length: this.cycle_length,
               duration: this.duration,
-              parents_email: this.parents_email
+              parents_email: this.parents_email,
+              parents_code: this.parents_code,
+              owner2: this.user.username
               }   
               await API.graphql(graphqlOperation(createCalEvent, {input: calendar}));
+
+              // estimate 2 yrs worth
+              this.occurences = 24 // prediction of 24 months
+              var start_date = this.start + " 00:00";
+              // console.log(start_date)
+              
+              for(let i=0; i <= this.occurences; i++){
+                var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
+                this.start = new Date(start_date);
+                this.end = new Date(start_date)
+                this.start.setDate( this.start.getDate() + repeat_every );
+                this.end.setDate( this.end.getDate() + repeat_every + (this.duration - 1 ));
+
+
+                this.events.push({
+                  name: this.name,
+                  start: this.start,
+                  end: this.end,
+                  color: 'purple darken-4',
+                })
+              }
+              this.name = null
+              this.start = null
+              this.cycle_length = null
+              this.duration = null
+              this.parents_email = null
+              this.parents_code = null
+              this.owner2 = null
             } catch (error) {
                 console.log(error)
             }
@@ -296,56 +459,11 @@ import { createCalEvent } from "@/graphql/mutations";
 
       // await API.graphql({query: createCalEvent, variables: { input: calendar }})
 
-
-        this.occurences = 24 // prediction of 24 months
-        var start_date = this.start + " 00:00";
-        // console.log(start_date)
-        
-        for(let i=0; i <= this.occurences; i++){
-          var repeat_every = this.cycle_length*i; //repeat every number of days/weeks/months
-          this.start = new Date(start_date);
-          this.end = new Date(start_date)
-          this.start.setDate( this.start.getDate() + repeat_every );
-          this.end.setDate( this.end.getDate() + repeat_every + (this.duration - 1 ));
-
-
-          this.events.push({
-            name: this.name,
-            start: this.start,
-            end: this.end,
-            color: 'purple darken-4',
-          })
-        }
-
-
-
-
-
         // var occurences = 24;
         // var duration = 5;
 
         // this.events = events
         this.dialog = false
-    },
-    async createEvent1() {
-      // this.name =""
-      // const { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status } = this;
-      // const calendar = { name, details, start, end, time_of_day, color, category, owner2, service_category, apt_num, apt_status };
-
-      // // Make field mandatory 
-      // // If user is admin and all info are available, then create record
-      // if (this.userProps === 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0)) && this.owner2 && this.category) {
-      //   await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()} 
-      // // Else if not admin and user with customer info, create record
-      // else if (this.userProps !== 'admin' && this.apt_num && this.start && this.time_of_day && this.apt_status && this.service_category && (new Date().setHours(0,0,0,0)) <= (new Date(this.start_date.replace(/-/g, '/')).setHours(0,0,0,0))){
-      //     await API.graphql({query: createCalEvent, variables: { input: calendar }});this.clearRecords()}
-      // else { 
-      //   this.showError = true
-      //   this.dialog_color = 'red lighten-5'
-      // }
-      // EH 1
-      // this.getCalEvents()
-
     },
     async isUserSignedIn(){
       // need to fix in future as it is throwing out an error
@@ -353,6 +471,7 @@ import { createCalEvent } from "@/graphql/mutations";
         const userObj = await Auth.currentAuthenticatedUser()
           this.signedIn = true
           this.user = userObj
+          this.username = this.user.username
       } catch (err) {
           this.signedIn = false
       }
@@ -379,7 +498,6 @@ import { createCalEvent } from "@/graphql/mutations";
       }
       try {
         this.username = this.email
-        console.log(this.username)
         const {username, password, email } = this
         await Auth.signUp({
             username,

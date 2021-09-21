@@ -9,4 +9,6 @@ type calEvent @model @auth(rules: [
     cycle_length: Int!
     duration: Int!
     parents_email: String
+    parents_code: String
+    owner2: String
   }

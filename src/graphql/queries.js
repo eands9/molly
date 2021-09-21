@@ -10,6 +10,8 @@ export const getCalEvent = /* GraphQL */ `
       cycle_length
       duration
       parents_email
+      parents_code
+      owner2
       createdAt
       updatedAt
       owner
@@ -30,6 +32,8 @@ export const listCalEvents = /* GraphQL */ `
         cycle_length
         duration
         parents_email
+        parents_code
+        owner2
         createdAt
         updatedAt
         owner
