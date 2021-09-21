@@ -28,15 +28,21 @@
       <v-card>
         <v-container>
           <!-- <v-alert v-if="showError" dense type="error">Required info missed *</v-alert> -->
-            <v-text-field class="mt-7" v-model="name" label="First Name? (*required)" outlined></v-text-field>
+            <v-text-field class="mt-2" v-model="name" label="First Name? (*required)" outlined></v-text-field>
             <v-text-field v-model="start" type="date" label="Start of last period (*=required)" outlined></v-text-field>
             <v-text-field v-model="duration" label="How long did it last? (*required)" outlined></v-text-field>
             <v-text-field v-model="cycle_length" label="How long is your menstrual cycle? (*required)" outlined></v-text-field>
-            <v-switch v-model="inform_parent" label="(For Daugthers) Turn on switch and fill out if you want to share info w a parent"></v-switch>
-            <v-text-field v-if="inform_parent" v-model="parents_email" label="Enter one parent's email" outlined></v-text-field>
-            <v-text-field v-if="inform_parent" v-model="parents_code" label="Enter your parent's code that they've created" outlined></v-text-field>
+            <!-- <v-switch v-model="inform_parent" label="(For Daugthers) Turn on switch and fill out if you want to share info w a parent"></v-switch> -->
+            <p>(Optional) Are you a Parent or Child? Choose below to share and/or receive info from others</p>
+            <v-radio-group v-model="inform_parent" row>
+              <v-radio label="Parent" color="purple darken-4" value="Parent"></v-radio>
+              <v-radio label="Child" color="purple darken-4" value="Child"></v-radio>
+            </v-radio-group>
+            <v-text-field v-if="iama_child" v-model="parents_email" label="Enter one parent's email" outlined></v-text-field>
+            <v-text-field v-if="iama_child" v-model="parents_code" label="Enter one parent's code that they've created" outlined></v-text-field>
+            <v-text-field v-if="iama_parent" v-model="parents_code" hint="Use a combination of letters and numbers" label="Enter code of your choice to share w your kid(s)" outlined></v-text-field>
             <v-row justify="center">
-            <v-btn type="submit" color="purple darken-4 white--text" class="ma-4" @click="createEvent">Get Results</v-btn>
+            <v-btn type="submit" color="purple darken-4 white--text" class="ma-2" @click="createEvent">Get Results</v-btn>
             </v-row>
         </v-container>
       </v-card>
@@ -217,7 +223,9 @@ import { listCalEvents } from "@/graphql/queries";
 
       dialog: false,
       item: "",
-
+      
+      iama_child: false,
+      iama_parent: false,
       inform_parent: false,
       name: null,
       start: null,
@@ -262,14 +270,24 @@ import { listCalEvents } from "@/graphql/queries";
       user: undefined,
       username: "",
     }),
-    // computed(){
-    //   this.isUserSignedIn();
-    // },
     watch:{
       user: function(){
         this.getCalEvents()
+      },
+      parents_code: function(){
         this.getCalEvents2()
-      }
+      },
+      inform_parent: function(){
+        if (this.inform_parent === 'Parent'){
+          this.iama_parent = true
+          this.parents_email = null
+          this.iama_child = false
+        } else {
+          this.iama_parent = false
+          this.iama_child = true
+        }
+
+      },
     },
     mounted () {
       this.$refs.calendar.checkChange()
@@ -312,35 +330,37 @@ import { listCalEvents } from "@/graphql/queries";
         // let events = []
         let ce = eventsorig
         ce.forEach(doc => {
-          console.log(doc.owner2)
-              this.occurences = 24 // prediction of 24 months
-              var start_date = doc.start + " 00:00";
-              // console.log(start_date)
-              
-              for(let i=0; i <= this.occurences; i++){
-                var repeat_every = doc.cycle_length*i; //repeat every number of days/weeks/months
-                this.start = new Date(start_date);
-                this.end = new Date(start_date)
-                this.start.setDate( this.start.getDate() + repeat_every );
-                this.end.setDate( this.end.getDate() + repeat_every + (doc.duration - 1 ));
+          this.parents_code = doc.parents_code
+          this.occurences = 24 // prediction of 24 months
+          var start_date = doc.start + " 00:00";
+          
+          for(let i=0; i <= this.occurences; i++){
+            var repeat_every = doc.cycle_length*i; //repeat every number of days/weeks/months
+            this.start = new Date(start_date);
+            this.end = new Date(start_date)
+            this.start.setDate( this.start.getDate() + repeat_every );
+            this.end.setDate( this.end.getDate() + repeat_every + (doc.duration - 1 ));
 
 
-                this.events.push({
-                  name: doc.name,
-                  start: this.start,
-                  end: this.end,
-                  color: 'purple darken-4',
-                })
-              }
+            this.events.push({
+              name: doc.name,
+              start: this.start,
+              end: this.end,
+              color: 'purple darken-4',
+            })
+          }
         })
 
       // if user is admin
       // }
     },
     async getCalEvents2() {
-      // when pulling data based on parent's email
-        this.events = []
-        let filter = {parents_email: {eq: this.username}};
+      // when pulling data based on parent's email and code
+        // let filter = {parents_email: {eq: this.username}};
+        let filter = {
+          and: [{parents_email: {eq: this.username}},
+                {parents_code: {eq: this.parents_code}}]
+        };
         const calendar1 = await API.graphql({ query: listCalEvents, variables: { limit: 1000, filter: filter }});
         this.setNextToken = calendar1.data.listCalEvents.nextToken
         const setCalendar1 = calendar1.data.listCalEvents.items
@@ -373,7 +393,6 @@ import { listCalEvents } from "@/graphql/queries";
         // let events = []
         let ce = eventsorig
         ce.forEach(doc => {
-          console.log(doc.owner2)
               this.occurences = 24 // prediction of 24 months
               var start_date = doc.start + " 00:00";
               // console.log(start_date)
